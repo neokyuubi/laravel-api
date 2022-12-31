@@ -2,26 +2,41 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Filters\V1\InvoicesFilter;
+use App\Http\Resources\V1\InvoiceCollection;
+use App\Http\Resources\V1\InvoiceResource;
+use App\Models\Customer;
 use App\Models\Invoice;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class InvoiceController extends Controller
 {
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @param Request $request
+     * @return InvoiceCollection
      */
-    public function index()
+    public function index(Request $request): InvoiceCollection
     {
-        //
+        $filter = new InvoicesFilter();
+        $queryItems = $filter->transform($request);
+        if (count($queryItems) == 0)
+        {
+            return new InvoiceCollection(Invoice::paginate());
+        }
+        else
+        {
+            return new InvoiceCollection(Invoice::where($queryItems)->paginate()->appends($request->query()));
+        }
     }
 
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -31,8 +46,8 @@ class InvoiceController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @param Request $request
+     * @return Response
      */
     public function store(Request $request)
     {
@@ -42,19 +57,19 @@ class InvoiceController extends Controller
     /**
      * Display the specified resource.
      *
-     * @param  \App\Models\Invoice  $invoice
-     * @return \Illuminate\Http\Response
+     * @param Invoice $invoice
+     * @return InvoiceResource
      */
-    public function show(Invoice $invoice)
+    public function show(Invoice $invoice): InvoiceResource
     {
-        //
+        return new InvoiceResource($invoice);
     }
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param  \App\Models\Invoice  $invoice
-     * @return \Illuminate\Http\Response
+     * @param Invoice $invoice
+     * @return Response
      */
     public function edit(Invoice $invoice)
     {
@@ -64,9 +79,9 @@ class InvoiceController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Invoice  $invoice
-     * @return \Illuminate\Http\Response
+     * @param Request $request
+     * @param Invoice $invoice
+     * @return Response
      */
     public function update(Request $request, Invoice $invoice)
     {
@@ -76,8 +91,8 @@ class InvoiceController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Models\Invoice  $invoice
-     * @return \Illuminate\Http\Response
+     * @param Invoice $invoice
+     * @return Response
      */
     public function destroy(Invoice $invoice)
     {
