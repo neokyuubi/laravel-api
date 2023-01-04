@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Http\Requests\V1\StoreCustomerRequest;
+use App\Http\Requests\V1\UpdateCustomerRequest;
 use App\Models\Customer;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\V1\CustomerCollection;
 use App\Http\Resources\V1\CustomerResource;
 use App\Filters\V1\CustomersFilter;
+use Doctrine\DBAL\Query\QueryBuilder;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -21,15 +25,16 @@ class CustomerController extends Controller
     public function index(Request $request): CustomerCollection
     {
         $filter = new CustomersFilter();
-        $queryItems = $filter->transform($request);
-        if (count($queryItems) == 0)
+        $filterItems = $filter->transform($request);
+
+        $includeInvoices = $request->query("includeInvoices");
+        $customers =  Customer::where($filterItems)
+        ->when($includeInvoices, function (\Illuminate\Database\Eloquent\Builder $builder)
         {
-            return new CustomerCollection(Customer::paginate());
-        }
-        else
-        {
-            return new CustomerCollection(Customer::where($queryItems)->paginate()->appends($request->query()));
-        }
+            return $builder->with("invoices");
+        });
+        return new CustomerCollection($customers->paginate()->appends($request->query()));
+
     }
 
     /**
@@ -45,12 +50,12 @@ class CustomerController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param Request $request
-     * @return Response
+     * @param StoreCustomerRequest $request
+     * @return CustomerResource
      */
-    public function store(Request $request)
+    public function store(StoreCustomerRequest $request): CustomerResource
     {
-        //
+        return new CustomerResource(Customer::create($request->all()));
     }
 
     /**
@@ -59,8 +64,13 @@ class CustomerController extends Controller
      * @param Customer $customer
      * @return CustomerResource
      */
-    public function show(Customer $customer): CustomerResource
+    public function show(Customer $customer, Request $request): CustomerResource
     {
+        $includeInvoices = $request->query("includeInvoices");
+        if ($includeInvoices)
+        {
+            $customer->loadMissing("invoices");
+        }
         return new CustomerResource($customer);
     }
 
@@ -78,13 +88,13 @@ class CustomerController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param Request $request
+     * @param UpdateCustomerRequest $request
      * @param Customer $customer
      * @return Response
      */
-    public function update(Request $request, Customer $customer)
+    public function update(UpdateCustomerRequest $request, Customer $customer)
     {
-        //
+        $customer->update($request->all());
     }
 
     /**
